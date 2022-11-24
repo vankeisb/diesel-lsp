@@ -2,3 +2,5 @@
 .bloop
 dist
 target
+project 
+.vscode
