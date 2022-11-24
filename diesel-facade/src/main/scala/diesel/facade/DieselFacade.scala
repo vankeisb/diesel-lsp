@@ -10,9 +10,11 @@ import scala.scalajs.js.annotation._
 @JSExportTopLevel("diesel")
 object DieselParsers {
 
-  def calcParser: DieselParserFacade = new DieselParserFacade(BmdDsl)
+  @JSExport
+  def bmdParser(): DieselParserFacade = new DieselParserFacade(BmdDsl)
 
-  def createParseRequest(text: String, axiom: js.UndefOr[String]) = new ParseRequest(text, axiom)
+  @JSExport
+  def createParseRequest(text: String) = new ParseRequest(text)
 
 }
 
@@ -44,7 +46,14 @@ class DieselParserFacade(val dsl: Dsl) {
 
 }
 
-class ParseRequest(val text: String, val axiom: js.UndefOr[String])
+@JSExportAll
+case class ParseRequest(val text: String, val axiom: js.UndefOr[String] = js.undefined) {
+
+  def setAxiom(axiom: js.UndefOr[String]): Unit = {
+    this.copy(axiom = axiom)
+  }
+
+}
 
 class DieselMarker(val marker: Marker) {
 
@@ -73,7 +82,7 @@ class DieselParseResult(val res: Either[String, GenericTree]) {
   val success: Boolean = res.isRight
 
   @JSExport
-  val error: Option[String] = res.left.toOption
+  val error: js.UndefOr[String] =  res.left.toOption.orUndefined
 
   @JSExport
   val markers: js.Array[DieselMarker] = res.toOption
