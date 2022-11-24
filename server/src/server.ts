@@ -21,6 +21,9 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
+// @ts-ignore
+import { tutorial } from '../../diesel-facade/dist/diesel-facade';
+
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
@@ -135,8 +138,10 @@ documents.onDidChangeContent(change => {
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	// In this simple example we get the settings for every validate run.
+	// In this simple example we get the settings for ev	ery validate run.
 	const settings = await getDocumentSettings(textDocument.uri);
+
+	tutorial.sayHello();
 
 	// The validator creates diagnostics for all uppercase words length 2 and more
 	const text = textDocument.getText();

@@ -1,7 +1,7 @@
 package tutorial.webapp
 
-import diesel.samples.jsmodeldsl.BmdDsl
 import diesel._
+import diesel.samples.jsmodeldsl.BmdDsl
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -22,14 +22,13 @@ object TutorialApp {
 }
 
 @JSExportTopLevel("diesel")
-object DieselParser {
+object DieselParsers {
 
-  val calcParser: DieselParser = new DieselParser(BmdDsl)
+  val calcParser: DieselParserFacade = new DieselParserFacade(BmdDsl)
 
 }
 
-@JSExport
-class DieselParser(val dsl: Dsl) {
+class DieselParserFacade(val dsl: Dsl) {
 
   val bnf: Bnf = Bnf(dsl, None)
   val parser: Earley = Earley(bnf, dsl.dynamicLexer)
@@ -56,10 +55,9 @@ class DieselParser(val dsl: Dsl) {
 
 }
 
-@JSExportAll
+@JSExportTopLevel("ParseRequest")
 class ParseRequest(val text: String, val axiom: js.UndefOr[String])
 
-@JSExport
 class DieselMarker(val marker: Marker) {
 
   @JSExport
@@ -81,7 +79,6 @@ class DieselMarker(val marker: Marker) {
 
 }
 
-@JSExport
 class DieselParseResult(val res: Either[String, GenericTree]) {
 
   @JSExport

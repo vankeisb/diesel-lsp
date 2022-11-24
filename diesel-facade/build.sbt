@@ -1,11 +1,16 @@
 enablePlugins(ScalaJSPlugin)
 
-name := "diesel-lsp"
+name := "diesel-lsp-facade"
 
 scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) }
 Test / scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) }
 
-scalaVersion := "2.13.1" // or any other Scala version >= 2.11.12
+semanticdbEnabled := true
+
+scalaVersion := "2.13.9" // or any other Scala version >= 2.11.12
+
+libraryDependencies += "com.ibm.cloud.diesel" %%% "diesel-core" % "0.2.0"
+libraryDependencies += "com.ibm.cloud.diesel" %%% "diesel-core-samples" % "0.2.0"
 
 scalacOptions ++= Seq(
   "-unchecked",
