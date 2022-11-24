@@ -20,9 +20,8 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-
-// @ts-ignore
-import { tutorial } from '../../diesel-facade/dist/diesel-facade';
+import { DieselParsers } from './typed-facade';
+import { start } from 'repl';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -137,11 +136,78 @@ documents.onDidChangeContent(change => {
 	validateTextDocument(change.document);
 });
 
+const bmdParser = DieselParsers.bmdParser();
+
+function createDiagnostic(textDocument: TextDocument, severity: DiagnosticSeverity, start: number, end: number, message: string, error?: string): Diagnostic {
+	const diagnostic: Diagnostic = {
+		severity,
+		range: {
+			start: textDocument.positionAt(start),
+			end: textDocument.positionAt(end),
+		},
+		message: error ?? "Unknown diesel parsing error :/",
+		source: "ex"
+	};
+	if (hasDiagnosticRelatedInformationCapability) {
+		diagnostic.relatedInformation = [
+			{
+				location: {
+					uri: textDocument.uri,
+					range: Object.assign({}, diagnostic.range)
+				},
+				message: 'Spelling matters'
+			}
+		];
+	}
+	return  diagnostic;
+}
+
+// async function validateWithDiesel(textDocument: TextDocument): Promise<void> {
+
+// 	const text = textDocument.getText();
+// 	const parseRequest = DieselParsers.createParseRequest(text);
+// 	const parseResult = bmdParser.parse(parseRequest);
+// 	if (parseResult.success) {
+
+// 	} else {
+// 		// parsing error
+// 		const diagnostic: Diagnostic = {
+// 			severity: DiagnosticSeverity.Error,
+// 			range: {
+// 				start: textDocument.positionAt(0),
+// 				end: textDocument.positionAt(text.length),
+// 			},
+// 			message: parseResult.error ?? "Unknown diesel parsing error :/",
+// 			source: "ex"
+// 		};
+// 		if (hasDiagnosticRelatedInformationCapability) {
+// 			diagnostic.relatedInformation = [
+// 				{
+// 					location: {
+// 						uri: textDocument.uri,
+// 						range: Object.assign({}, diagnostic.range)
+// 					},
+// 					message: 'Spelling matters'
+// 				},
+// 				{
+// 					location: {
+// 						uri: textDocument.uri,
+// 						range: Object.assign({}, diagnostic.range)
+// 					},
+// 					message: 'Particularly for names'
+// 				}
+// 			];
+// 		}
+// 	}
+
+
+	
+	
+// }
+
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for ev	ery validate run.
 	const settings = await getDocumentSettings(textDocument.uri);
-
-	tutorial.sayHello();
 
 	// The validator creates diagnostics for all uppercase words length 2 and more
 	const text = textDocument.getText();
