@@ -1,4 +1,4 @@
-package tutorial.webapp
+package diesel.facade
 
 import diesel._
 import diesel.samples.jsmodeldsl.BmdDsl
@@ -7,24 +7,12 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation._
 
-@JSExportTopLevel("tutorial")
-object Tutorial {
-  @JSExport
-  def sayHello(): Unit = {
-    println("Hello world (bis) !")
-  }
-}
-
-object TutorialApp {
-  def main(args: Array[String]): Unit = {
-    println("Hello world!")
-  }
-}
-
 @JSExportTopLevel("diesel")
 object DieselParsers {
 
-  val calcParser: DieselParserFacade = new DieselParserFacade(BmdDsl)
+  def calcParser: DieselParserFacade = new DieselParserFacade(BmdDsl)
+
+  def createParseRequest(text: String, axiom: js.UndefOr[String]) = new ParseRequest(text, axiom)
 
 }
 
@@ -33,6 +21,7 @@ class DieselParserFacade(val dsl: Dsl) {
   val bnf: Bnf = Bnf(dsl, None)
   val parser: Earley = Earley(bnf, dsl.dynamicLexer)
 
+  @JSExport
   def parse(request: ParseRequest): DieselParseResult = {
     val a = getBnfAxiomOrThrow(request.axiom.toOption)
     val r = parser.parse(new Lexer.Input(request.text), a)
@@ -55,7 +44,6 @@ class DieselParserFacade(val dsl: Dsl) {
 
 }
 
-@JSExportTopLevel("ParseRequest")
 class ParseRequest(val text: String, val axiom: js.UndefOr[String])
 
 class DieselMarker(val marker: Marker) {
