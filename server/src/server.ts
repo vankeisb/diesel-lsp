@@ -20,7 +20,7 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import { DieselParsers } from './typed-facade';
+import { DieselMarker, DieselParsers } from './typed-facade';
 import { start } from 'repl';
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -138,47 +138,82 @@ documents.onDidChangeContent(change => {
 
 const bmdParser = DieselParsers.bmdParser();
 
-function createDiagnostic(textDocument: TextDocument, severity: DiagnosticSeverity, start: number, end: number, message: string, error?: string): Diagnostic {
+const DIAG_SOURCE = "my diesel";
+
+function createDiagnostic(textDocument: TextDocument, severity: DiagnosticSeverity, start: number, end: number, message: string): Diagnostic {
 	const diagnostic: Diagnostic = {
 		severity,
 		range: {
 			start: textDocument.positionAt(start),
 			end: textDocument.positionAt(end),
 		},
-		message: error ?? "Unknown diesel parsing error :/",
-		source: "ex"
+		message,
+		source: DIAG_SOURCE
 	};
-	if (hasDiagnosticRelatedInformationCapability) {
-		diagnostic.relatedInformation = [
-			{
-				location: {
-					uri: textDocument.uri,
-					range: Object.assign({}, diagnostic.range)
-				},
-				message: 'Spelling matters'
-			}
-		];
-	}
 	return  diagnostic;
 }
 
-// async function validateWithDiesel(textDocument: TextDocument): Promise<void> {
 
+const SEV_MAP: {[key: string]:DiagnosticSeverity} = {
+	"info": DiagnosticSeverity.Information,
+	"warning": DiagnosticSeverity.Warning,
+	"error": DiagnosticSeverity.Error
+};
+
+
+function createDiagnosticFromDieselMarker(textDocument: TextDocument, m: DieselMarker): Diagnostic {
+	return createDiagnostic(
+		textDocument,
+		SEV_MAP[m.severity] ?? "error",
+		m.offset,
+		m.offset + m.length,
+		m.getMessage("en")
+	);
+}
+
+async function validateTextDocument(textDocument: TextDocument): Promise<void> {
+
+	const text = textDocument.getText();
+	const parseRequest = DieselParsers.createParseRequest(text);
+	const parseResult = bmdParser.parse(parseRequest);
+	const diagnostics: Diagnostic[] = [];
+	if (parseResult.success) {
+		// it's ok, look for markers
+		parseResult.markers.forEach(marker => {
+			diagnostics.push(
+				createDiagnosticFromDieselMarker(textDocument, marker)
+			);
+		});
+	} else {
+		// parsing error
+		// TODO better logging
+		diagnostics.push(createDiagnostic(textDocument, DiagnosticSeverity.Error, 0, text.length, parseResult.error ?? "Unhandled parsing error :/"));
+	}
+	// Send the computed diagnostics to VSCode.
+	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+}
+
+// async function validateTextDocument(textDocument: TextDocument): Promise<void> {
+// 	// In this simple example we get the settings for ev	ery validate run.
+// 	const settings = await getDocumentSettings(textDocument.uri);
+
+// 	// The validator creates diagnostics for all uppercase words length 2 and more
 // 	const text = textDocument.getText();
-// 	const parseRequest = DieselParsers.createParseRequest(text);
-// 	const parseResult = bmdParser.parse(parseRequest);
-// 	if (parseResult.success) {
+// 	const pattern = /\b[A-Z]{2,}\b/g;
+// 	let m: RegExpExecArray | null;
 
-// 	} else {
-// 		// parsing error
+// 	let problems = 0;
+// 	const diagnostics: Diagnostic[] = [];
+// 	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
+// 		problems++;
 // 		const diagnostic: Diagnostic = {
-// 			severity: DiagnosticSeverity.Error,
+// 			severity: DiagnosticSeverity.Warning,
 // 			range: {
-// 				start: textDocument.positionAt(0),
-// 				end: textDocument.positionAt(text.length),
+// 				start: textDocument.positionAt(m.index),
+// 				end: textDocument.positionAt(m.index + m[0].length)
 // 			},
-// 			message: parseResult.error ?? "Unknown diesel parsing error :/",
-// 			source: "ex"
+// 			message: `${m[0]} is all uppercase.`,
+// 			source: 'diesel'
 // 		};
 // 		if (hasDiagnosticRelatedInformationCapability) {
 // 			diagnostic.relatedInformation = [
@@ -198,59 +233,12 @@ function createDiagnostic(textDocument: TextDocument, severity: DiagnosticSeveri
 // 				}
 // 			];
 // 		}
+// 		diagnostics.push(diagnostic);
 // 	}
 
-
-	
-	
+// 	// Send the computed diagnostics to VSCode.
+// 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 // }
-
-async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	// In this simple example we get the settings for ev	ery validate run.
-	const settings = await getDocumentSettings(textDocument.uri);
-
-	// The validator creates diagnostics for all uppercase words length 2 and more
-	const text = textDocument.getText();
-	const pattern = /\b[A-Z]{2,}\b/g;
-	let m: RegExpExecArray | null;
-
-	let problems = 0;
-	const diagnostics: Diagnostic[] = [];
-	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
-		problems++;
-		const diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Warning,
-			range: {
-				start: textDocument.positionAt(m.index),
-				end: textDocument.positionAt(m.index + m[0].length)
-			},
-			message: `${m[0]} is all uppercase.`,
-			source: 'ex'
-		};
-		if (hasDiagnosticRelatedInformationCapability) {
-			diagnostic.relatedInformation = [
-				{
-					location: {
-						uri: textDocument.uri,
-						range: Object.assign({}, diagnostic.range)
-					},
-					message: 'Spelling matters'
-				},
-				{
-					location: {
-						uri: textDocument.uri,
-						range: Object.assign({}, diagnostic.range)
-					},
-					message: 'Particularly for names'
-				}
-			];
-		}
-		diagnostics.push(diagnostic);
-	}
-
-	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
-}
 
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
