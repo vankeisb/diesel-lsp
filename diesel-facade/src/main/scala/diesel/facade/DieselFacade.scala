@@ -47,7 +47,7 @@ class DieselParserFacade(val dsl: Dsl) {
 }
 
 @JSExportAll
-case class ParseRequest(val text: String, val axiom: js.UndefOr[String] = js.undefined) {
+case class ParseRequest(text: String, axiom: js.UndefOr[String] = js.undefined) {
 
   def setAxiom(axiom: js.UndefOr[String]): Unit = {
     this.copy(axiom = axiom)
@@ -55,7 +55,7 @@ case class ParseRequest(val text: String, val axiom: js.UndefOr[String] = js.und
 
 }
 
-class DieselMarker(val marker: Marker) {
+class DieselMarker(private val marker: Marker) {
 
   @JSExport
   val offset: Int = marker.offset
@@ -76,6 +76,18 @@ class DieselMarker(val marker: Marker) {
 
 }
 
+class DieselStyle(private val styledRange: StyledRange) {
+
+  @JSExport
+  val offset: Int = styledRange.offset
+
+  @JSExport
+  val length: Int = styledRange.length
+
+  @JSExport
+  val style: String = styledRange.style.name
+}
+
 class DieselParseResult(val res: Either[String, GenericTree]) {
 
   @JSExport
@@ -91,6 +103,12 @@ class DieselParseResult(val res: Either[String, GenericTree]) {
     .map(m => new DieselMarker(m))
     .toJSArray
 
+  @JSExport
+  val styles: js.Array[DieselStyle] = res.toOption
+    .map(new Styles(_).styledRanges)
+    .getOrElse(Seq.empty)
+    .map(s => new DieselStyle(s))
+    .toJSArray
 }
 
 object DieselParseResult {

@@ -1,38 +1,51 @@
 import exp = require('constants');
 import { DieselParseResult, DieselParsers } from './typed-facade';
+import { expect, assert } from 'chai';
 
 function doParseBmd(text: string): DieselParseResult {
 	const bmdParser = DieselParsers.bmdParser();
-	expect(bmdParser).toBeDefined();
+	assert(bmdParser != undefined);
 	const pr = DieselParsers.createParseRequest(text);
 	const res = bmdParser.parse(pr);
-	expect(res).toBeDefined();
+	assert(res != undefined);
 	return res;
 }
 
 describe("typed facade", () => {
 	it("should create a parse request", () => {
 		const pr = DieselParsers.createParseRequest("yalla");
-		expect(pr.text).toBe("yalla");
-		expect(pr.axiom).toBeUndefined();
+		assert(pr.text === "yalla");
+		assert(pr.axiom === undefined);
 	});
 
 	it("should parse valid bmd", () => {
 		const result = doParseBmd("a person is a concept.");
-		expect(result.success).toBe(true);
-		expect(result.error).toBeUndefined();
-		expect(result.markers.length).toBe(0);
+		expect(result.success).to.be.true;
+		expect(result.error).to.be.undefined;
+		expect(result.markers.length).to.equal(0);
 	});
 
 	it("should parse bmd with errors", () => {
 		const result = doParseBmd("a person is a concept");
-		expect(result.success).toBe(true);
-		expect(result.error).toBeUndefined();
-		expect(result.markers.length).toBe(1);
+		expect(result.success).to.be.true;
+		expect(result.error).to.be.undefined;
+		expect(result.markers.length).to.equal(1);
 		const m = result.markers[0];
-		expect(m.offset).toBe(21);
-		expect(m.length).toBe(0);
-		expect(m.severity).toBe("error");
-		expect(m.getMessage("en")).toBe("The word '.' is missing.");
+		expect(m.offset).to.equal(21);
+		expect(m.length).to.equal(0);
+		expect(m.severity).to.equal("error");
+		expect(m.getMessage("en")).to.equal("The word '.' is missing.");
+	});
+
+	it("should return styles", () => {
+		const result = doParseBmd("a person is a concept.");
+		expect(result.success).to.be.true;
+		expect(result.error).to.be.undefined;
+		expect(result.markers.length).to.equal(0);
+		expect(result.styles.length).to.equal(1);
+		const s = result.styles[0];
+		expect(s.style).to.equal("keyword");
+		expect(s.length).to.equal(7);
+		expect(s.offset).to.equal(14);
 	});
 });

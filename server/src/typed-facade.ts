@@ -16,17 +16,25 @@ export interface ParseRequest {
 	readonly axiom?: string;
 }
 
-export interface DieselMarker {
+export interface HasRange {
 	readonly offset: number;
 	readonly length: number;
+}
+
+export interface DieselMarker extends HasRange {
 	readonly severity: string;
 	getMessage(locale: string): string;
+}
+
+export interface DieselStyle extends HasRange {
+	readonly style: string;
 }
 
 export interface DieselParseResult {
 	readonly success: boolean;
 	readonly error?: string; 
 	readonly markers: ReadonlyArray<DieselMarker>;
+	readonly styles: ReadonlyArray<DieselStyle>;
 }
 
 export interface DieselParserFacade {
