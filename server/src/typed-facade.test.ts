@@ -48,4 +48,15 @@ describe("typed facade", () => {
 		expect(s.length).to.equal(7);
 		expect(s.offset).to.equal(14);
 	});
+
+	it("should predict", () => {
+		const bmdParser = DieselParsers.bmdParser();
+		const predictRequest = DieselParsers.createPredictRequest("a x", 3);
+		const predictResult = bmdParser.predict(predictRequest);
+		expect(predictResult.success).to.be.true;
+		expect(predictResult.error).to.be.undefined;
+		expect(predictResult.proposals.length).to.equal(5);
+		const p0 = predictResult.proposals[1].text;
+		expect(p0).to.equal("has");
+	});
 });

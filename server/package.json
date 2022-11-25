@@ -12,7 +12,7 @@
 		"url": "https://github.com/Microsoft/vscode-extension-samples"
 	},
 	"scripts": {
-		"test": "mocha -r ts-node/register 'src/**/*.test.ts'"
+		"test": "mocha"
 	},
 	"dependencies": {
 		"vscode-languageserver": "^7.0.0",

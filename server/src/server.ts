@@ -25,7 +25,7 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import { DieselMarker, DieselParsers } from './typed-facade';
+import { DieselCompletionProposal, DieselMarker, DieselParsers } from './typed-facade';
 import { start } from 'repl';
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -266,21 +266,45 @@ connection.onDidChangeWatchedFiles(_change => {
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
 	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-		// The pass parameter contains the position of the text document in
-		// which code complete got requested. For the example we ignore this
-		// info and always provide the same completion items.
-		return [
-			{
-				label: 'TypeScript',
+
+		const document = documents.get(_textDocumentPosition.textDocument.uri);
+		if (!document) {
+			return [];
+		}
+
+		const offset = document.offsetAt(_textDocumentPosition.position);
+		const predictRequest = DieselParsers.createPredictRequest(document.getText(), offset);
+		const predictResult = bmdParser.predict(predictRequest);
+		if (!predictResult.success) {
+			connection.console.error(predictResult.error ?? "Failed to parse, cannot predict");
+			return [];
+		}
+
+		return predictResult.proposals.map(p => {
+			return {
+				label: p.text,
 				kind: CompletionItemKind.Text,
-				data: 1
-			},
-			{
-				label: 'JavaScript',
-				kind: CompletionItemKind.Text,
-				data: 2
-			}
-		];
+				data: p,
+			};
+		}); 
+
+
+
+		// // The pass parameter contains the position of the text document in
+		// // which code complete got requested. For the example we ignore this
+		// // info and always provide the same completion items.
+		// return [
+		// 	{
+		// 		label: 'TypeScript',
+		// 		kind: CompletionItemKind.Text,
+		// 		data: 1
+		// 	},
+		// 	{
+		// 		label: 'JavaScript',
+		// 		kind: CompletionItemKind.Text,
+		// 		data: 2
+		// 	}
+		// ];
 	}
 );
 
@@ -288,13 +312,10 @@ connection.onCompletion(
 // the completion list.
 connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
-		if (item.data === 1) {
-			item.detail = 'TypeScript details';
-			item.documentation = 'TypeScript documentation';
-		} else if (item.data === 2) {
-			item.detail = 'JavaScript details';
-			item.documentation = 'JavaScript documentation';
-		}
+		const d = item.data as DieselCompletionProposal;
+		if (d) {
+			item.detail = d.text;
+		} 
 		return item;
 	}
 );

@@ -14,7 +14,10 @@ object DieselParsers {
   def bmdParser(): DieselParserFacade = new DieselParserFacade(BmdDsl)
 
   @JSExport
-  def createParseRequest(text: String) = new ParseRequest(text)
+  def createParseRequest(text: String) = ParseRequest(text)
+
+  @JSExport
+  def createPredictRequest(text: String, offset: Int) = PredictionRequest(ParseRequest(text), offset)
 
 }
 
@@ -23,11 +26,19 @@ class DieselParserFacade(val dsl: Dsl) {
   val bnf: Bnf = Bnf(dsl, None)
   val parser: Earley = Earley(bnf, dsl.dynamicLexer)
 
-  @JSExport
-  def parse(request: ParseRequest): DieselParseResult = {
+  private def doParse(request: ParseRequest): Result = {
     val a = getBnfAxiomOrThrow(request.axiom.toOption)
-    val r = parser.parse(new Lexer.Input(request.text), a)
-    DieselParseResult(r)
+    parser.parse(new Lexer.Input(request.text), a)
+  }
+
+  @JSExport
+  def parse(request: ParseRequest): DieselParseResult = DieselParseResult(doParse(request))
+
+  @JSExport
+  def predict(request: PredictionRequest): DieselPredictResult = {
+    val a = getBnfAxiomOrThrow(request.parseRequest.axiom.toOption)
+    val r = parser.parse(new Lexer.Input(request.parseRequest.text), a)
+    DieselPredictResult(doParse(request.parseRequest), request.offset)
   }
 
   // TODO borrowed from AstHelper
@@ -54,6 +65,9 @@ case class ParseRequest(text: String, axiom: js.UndefOr[String] = js.undefined) 
   }
 
 }
+
+@JSExportAll
+case class PredictionRequest(parseRequest: ParseRequest, offset: Int)
 
 class DieselMarker(private val marker: Marker) {
 
@@ -85,10 +99,10 @@ class DieselStyle(private val styledRange: StyledRange) {
   val length: Int = styledRange.length
 
   @JSExport
-  val style: String = styledRange.style.name
+  val name: String = styledRange.style.name
 }
 
-class DieselParseResult(val res: Either[String, GenericTree]) {
+class DieselParseResult(private val res: Either[String, GenericTree]) {
 
   @JSExport
   val success: Boolean = res.isRight
@@ -113,7 +127,7 @@ class DieselParseResult(val res: Either[String, GenericTree]) {
 
 object DieselParseResult {
 
-  def errorResult(reason: String): DieselParseResult = new DieselParseResult(Left(reason))
+  private def errorResult(reason: String): DieselParseResult = new DieselParseResult(Left(reason))
 
   def apply(result: Result): DieselParseResult = {
     if (result.success) {
@@ -128,6 +142,70 @@ object DieselParseResult {
         }
       } else {
        errorResult("No AST found ??")
+      }
+    } else {
+      errorResult("parsing failure :/")
+    }
+  }
+}
+
+class Replace(private val r: (Int,Int)) {
+
+  @JSExport
+  val offset: Int = r._1
+
+  @JSExport
+  val length: Int = r._2
+
+}
+
+class DieselCompletionProposal(private val proposal: CompletionProposal) {
+
+  @JSExport
+  val text: String = proposal.text
+
+  @JSExport
+  val replace: js.UndefOr[Replace] = proposal.replace
+    .map(new Replace(_))
+    .orUndefined
+
+}
+
+
+class DieselPredictResult(private val res: Either[String, Seq[CompletionProposal]]) {
+
+  @JSExport
+  val success: Boolean = res.isRight
+
+  @JSExport
+  val error: js.UndefOr[String] =  res.left.toOption.orUndefined
+
+  @JSExport
+  val proposals: js.Array[DieselCompletionProposal] = res
+    .toOption
+    .getOrElse(Seq.empty)
+    .map(new DieselCompletionProposal(_))
+    .toJSArray
+
+}
+
+
+object DieselPredictResult {
+
+  private def errorResult(reason: String): DieselPredictResult = new DieselPredictResult(Left(reason))
+
+  def apply(result: Result, offset: Int): DieselPredictResult = {
+    if (result.success) {
+      val navigator = Navigator(result)
+      if (navigator.hasNext) {
+        val proposals = new CompletionProcessor(
+          result,
+          None,
+          None
+        ).computeCompletionProposal(offset).distinctBy(_.text) // not sure why but we have to dedup this
+        new DieselPredictResult(Right(proposals))
+      } else {
+        errorResult("No AST found ??")
       }
     } else {
       errorResult("parsing failure :/")
