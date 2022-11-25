@@ -1,12 +1,10 @@
 import exp = require('constants');
-import { DieselParseResult, DieselParsers } from './typed-facade';
+import { BMD_PARSER, DieselParseResult, DieselParsers } from './typed-facade';
 import { expect, assert } from 'chai';
 
 function doParseBmd(text: string): DieselParseResult {
-	const bmdParser = DieselParsers.bmdParser();
-	assert(bmdParser != undefined);
 	const pr = DieselParsers.createParseRequest(text);
-	const res = bmdParser.parse(pr);
+	const res = BMD_PARSER.parse(pr);
 	assert(res != undefined);
 	return res;
 }
@@ -50,9 +48,8 @@ describe("typed facade", () => {
 	});
 
 	it("should predict", () => {
-		const bmdParser = DieselParsers.bmdParser();
 		const predictRequest = DieselParsers.createPredictRequest("a x", 3);
-		const predictResult = bmdParser.predict(predictRequest);
+		const predictResult = BMD_PARSER.predict(predictRequest);
 		expect(predictResult.success).to.be.true;
 		expect(predictResult.error).to.be.undefined;
 		expect(predictResult.proposals.length).to.equal(5);

@@ -25,7 +25,7 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import { DieselCompletionProposal, DieselMarker, DieselParsers } from './typed-facade';
+import { BMD_PARSER, DieselCompletionProposal, DieselMarker, DieselParsers } from './typed-facade';
 import { start } from 'repl';
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -154,8 +154,6 @@ documents.onDidChangeContent(change => {
 	validateTextDocument(change.document);
 });
 
-const bmdParser = DieselParsers.bmdParser();
-
 const DIAG_SOURCE = "my diesel";
 
 function createDiagnostic(textDocument: TextDocument, severity: DiagnosticSeverity, start: number, end: number, message: string): Diagnostic {
@@ -193,7 +191,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 
 	const text = textDocument.getText();
 	const parseRequest = DieselParsers.createParseRequest(text);
-	const parseResult = bmdParser.parse(parseRequest);
+	const parseResult = BMD_PARSER.parse(parseRequest);
 	const diagnostics: Diagnostic[] = [];
 	if (parseResult.success) {
 		// it's ok, look for markers
@@ -274,7 +272,7 @@ connection.onCompletion(
 
 		const offset = document.offsetAt(_textDocumentPosition.position);
 		const predictRequest = DieselParsers.createPredictRequest(document.getText(), offset);
-		const predictResult = bmdParser.predict(predictRequest);
+		const predictResult = BMD_PARSER.predict(predictRequest);
 		if (!predictResult.success) {
 			connection.console.error(predictResult.error ?? "Failed to parse, cannot predict");
 			return [];
@@ -322,7 +320,7 @@ connection.onRequest(
 			return null;
 		}
 		const parseRequest = DieselParsers.createParseRequest(document.getText());
-		const parseResult = bmdParser.parse(parseRequest);
+		const parseResult = BMD_PARSER.parse(parseRequest);
 		const builder = new SemanticTokensBuilder();
 		if (parseResult.success) {
 			// it's ok, look for styles

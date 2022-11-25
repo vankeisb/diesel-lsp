@@ -1,9 +1,14 @@
 package com.myco.xyz
 
 import diesel.facade.DieselParserFacade
+import diesel.samples.jsmodeldsl.BmdDsl
 
-object MyDieselParser {
+import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
-  val myDslParser: DieselParserFacade = new DieselParserFacade(MyDsl)
+@JSExportTopLevel("MyBmdParser")
+object MyBmdParser {
+
+  @JSExport
+  def createBmdParser(): DieselParserFacade = new DieselParserFacade(BmdDsl)
 
 }

@@ -1,10 +1,10 @@
 // @ts-ignore
-import { diesel } from '../../diesel-facade/dist/diesel-facade';
+import { diesel, MyBmdParser } from '../../diesel-facade/dist/my-bmd-facade';
+
+
+export const BMD_PARSER = MyBmdParser.createBmdParser() as DieselParserFacade;
 
 export const DieselParsers = {
-	bmdParser(): DieselParserFacade {
-		return diesel.bmdParser() as DieselParserFacade;
-	},
 	createParseRequest(text: string): ParseRequest {
 		return diesel.createParseRequest(text) as ParseRequest;
 	},
