@@ -39,18 +39,6 @@ let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
-function getBmdTokenType(styleName: string): number {
-	switch (styleName) {
-		case "keyword":
-			return allTokenTypes.indexOf(SemanticTokenTypes.keyword);
-		case "builtin-type":
-			return allTokenTypes.indexOf(SemanticTokenTypes.string);
-		case "domain-value":
-			return allTokenTypes.indexOf(SemanticTokenTypes.enum);
-	}
-	return 0;
-}
-
 const allTokenTypes: readonly SemanticTokenTypes[] = [
 	SemanticTokenTypes.keyword,
 	SemanticTokenTypes.string,
@@ -311,6 +299,18 @@ connection.onCompletionResolve(
 	}
 );
 
+function getBmdTokenType(styleName: string): number {
+	switch (styleName) {
+		case "keyword":
+			return allTokenTypes.indexOf(SemanticTokenTypes.keyword);
+		case "builtin-type":
+			return allTokenTypes.indexOf(SemanticTokenTypes.string);
+		case "domain-value":
+			return allTokenTypes.indexOf(SemanticTokenTypes.enum);
+	}
+	return 0;
+}
+
 connection.onRequest(
 	SemanticTokensRequest.type,
 	(params: SemanticTokensParams) => {
@@ -318,28 +318,22 @@ connection.onRequest(
 		if (!document) {
 			return null;
 		}
-		// try {
-			console.log("parse styles");
-
-			const text = document.getText();
-			// const styles = bmdClient.parseStyles(text);
-
-			// return styles.then((styles) => {
-				const builder = new SemanticTokensBuilder();
-				// styles.forEach((style) => {
-				// 	const { line, character } = document.positionAt(style.offset);
-				// 	const length = style.length;
-				// 	const tokenType = getBmdTokenType(style.name);
-				// 	builder.push(line, character, length, tokenType, 0);
-				// });
-				return builder.build();
-			// });
-		// } catch (e) {
-		// 	connection.console.error(
-		// 		`Error while validating ${params.textDocument.uri}`
-		// 	);
-		// 	connection.console.error(e);
-		// }
+		const parseRequest = DieselParsers.createParseRequest(document.getText());
+		const parseResult = bmdParser.parse(parseRequest);
+		const builder = new SemanticTokensBuilder();
+		if (parseResult.success) {
+			// it's ok, look for styles
+			parseResult.styles.forEach(style => {
+				const { line, character } = document.positionAt(style.offset);
+				const length = style.length;
+				const tokenType = getBmdTokenType(style.name);
+				builder.push(line, character, length, tokenType, 0);
+			});
+		} else {
+			// parsing error
+			connection.console.error("Unhandled parsing error, styles will not be available");
+		}
+		return builder.build();
 	}
 );
 

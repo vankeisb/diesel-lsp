@@ -44,7 +44,7 @@ describe("typed facade", () => {
 		expect(result.markers.length).to.equal(0);
 		expect(result.styles.length).to.equal(1);
 		const s = result.styles[0];
-		expect(s.style).to.equal("keyword");
+		expect(s.name).to.equal("keyword");
 		expect(s.length).to.equal(7);
 		expect(s.offset).to.equal(14);
 	});

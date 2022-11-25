@@ -27,7 +27,7 @@ export interface DieselMarker extends HasRange {
 }
 
 export interface DieselStyle extends HasRange {
-	readonly style: string;
+	readonly name: string;
 }
 
 export interface DieselParseResult {
