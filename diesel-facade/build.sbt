@@ -6,8 +6,9 @@ scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) }
 Test / scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) }
 
 semanticdbEnabled := true
+semanticdbVersion := scalafixSemanticdb.revision
 
-scalaVersion := "2.13.9" // or any other Scala version >= 2.11.12
+scalaVersion := "2.13.10" // or any other Scala version >= 2.11.12
 
 libraryDependencies += "com.ibm.cloud.diesel" %%% "diesel-core" % "0.2.0"
 libraryDependencies += "com.ibm.cloud.diesel" %%% "diesel-core-samples" % "0.2.0"

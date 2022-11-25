@@ -14,7 +14,12 @@ import {
 	CompletionItemKind,
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	SemanticTokens,
+	SemanticTokensRequest,
+	SemanticTokensParams,
+	SemanticTokensBuilder,
+	SemanticTokenTypes
 } from 'vscode-languageserver/node';
 
 import {
@@ -33,6 +38,24 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+
+function getBmdTokenType(styleName: string): number {
+	switch (styleName) {
+		case "keyword":
+			return allTokenTypes.indexOf(SemanticTokenTypes.keyword);
+		case "builtin-type":
+			return allTokenTypes.indexOf(SemanticTokenTypes.string);
+		case "domain-value":
+			return allTokenTypes.indexOf(SemanticTokenTypes.enum);
+	}
+	return 0;
+}
+
+const allTokenTypes: readonly SemanticTokenTypes[] = [
+	SemanticTokenTypes.keyword,
+	SemanticTokenTypes.string,
+	SemanticTokenTypes.enum,
+];
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -53,11 +76,18 @@ connection.onInitialize((params: InitializeParams) => {
 
 	const result: InitializeResult = {
 		capabilities: {
-			textDocumentSync: TextDocumentSyncKind.Incremental,
+			textDocumentSync: TextDocumentSyncKind.Full,
 			// Tell the client that this server supports code completion.
 			completionProvider: {
 				resolveProvider: true
-			}
+			},
+			semanticTokensProvider: {
+				legend: {
+					tokenTypes: allTokenTypes.map((t) => t.toString()),
+					tokenModifiers: [],
+				},
+				full: true,
+			},
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -150,11 +180,11 @@ function createDiagnostic(textDocument: TextDocument, severity: DiagnosticSeveri
 		message,
 		source: DIAG_SOURCE
 	};
-	return  diagnostic;
+	return diagnostic;
 }
 
 
-const SEV_MAP: {[key: string]:DiagnosticSeverity} = {
+const SEV_MAP: { [key: string]: DiagnosticSeverity } = {
 	"info": DiagnosticSeverity.Information,
 	"warning": DiagnosticSeverity.Warning,
 	"error": DiagnosticSeverity.Error
@@ -278,6 +308,38 @@ connection.onCompletionResolve(
 			item.documentation = 'JavaScript documentation';
 		}
 		return item;
+	}
+);
+
+connection.onRequest(
+	SemanticTokensRequest.type,
+	(params: SemanticTokensParams) => {
+		const document = documents.get(params.textDocument.uri);
+		if (!document) {
+			return null;
+		}
+		// try {
+			console.log("parse styles");
+
+			const text = document.getText();
+			// const styles = bmdClient.parseStyles(text);
+
+			// return styles.then((styles) => {
+				const builder = new SemanticTokensBuilder();
+				// styles.forEach((style) => {
+				// 	const { line, character } = document.positionAt(style.offset);
+				// 	const length = style.length;
+				// 	const tokenType = getBmdTokenType(style.name);
+				// 	builder.push(line, character, length, tokenType, 0);
+				// });
+				return builder.build();
+			// });
+		// } catch (e) {
+		// 	connection.console.error(
+		// 		`Error while validating ${params.textDocument.uri}`
+		// 	);
+		// 	connection.console.error(e);
+		// }
 	}
 );
 
